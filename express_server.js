@@ -23,10 +23,20 @@ app.get("/hello", (req, res) => {
   res.render("hello", templateVars);
 });
 
+app.get("/urls/:shortURL", (req, res) => {
+  console.log("HERE'S SHORT URL" + req.params);
+  
+  let templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] };
+  console.log(urlDatabase[req.params.shortURL]);
+  res.render("urls_show", templateVars);
+});
+
 app.get("/urls", (req, res) => {
   let templateVars = { urls: urlDatabase };
   res.render("urls_index", templateVars);
 });
+
+
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
