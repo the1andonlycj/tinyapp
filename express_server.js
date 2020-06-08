@@ -23,6 +23,12 @@ app.get("/hello", (req, res) => {
   res.render("hello", templateVars);
 });
 
+
+app.get("/urls/new", (req, res) => {
+  res.render("urls_new");
+});
+
+
 app.get("/urls/:shortURL", (req, res) => {
   console.log("HERE'S SHORT URL" + req.params);
   
