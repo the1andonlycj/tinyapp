@@ -6,6 +6,14 @@ app.set("view engine", "ejs");
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
 
+function generateRandomString() {
+  var randomString = '';
+  var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  for ( var i = 0; i < 6; i++ ) {
+     randomString += characters.charAt(Math.floor(Math.random() * 62));
+  }
+  return (randomString);
+}
 
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
