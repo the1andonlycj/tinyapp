@@ -24,6 +24,13 @@ app.get("/", (req, res) => {
   res.send("Hello!");
 });
 
+//Setting up the delete function for URLs
+app.post("/urls/:shortURL/delete", (req, res) => {
+  console.log("Ths is happening apparently."); //This console.log is not triggering, which means the event isn't happening at all right now.
+  delete urlDatabase[req.params.shortURL]; //change console.log to delete once this thing works
+  res.redirect("/urls");  //reload the page (now without the deleted URL upon completion)
+})
+
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
@@ -33,6 +40,7 @@ app.get("/hello", (req, res) => {
   let templateVars = { greeting: 'Hello World!' };
   res.render("hello", templateVars);
 });
+
 
 app.post("/urls", (req, res) => {
   let shorty = generateRandomString(); //Saving the random string to shorty variable
@@ -52,7 +60,7 @@ app.get("/urls/new", (req, res) => {
 
 
 app.get("/urls/:shortURL", (req, res) => {
-  console.log("HERE'S SHORT URL" + req.params);
+  console.log("HERE'S YOUR SHORT URL" + req.params);
   
   let templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] };
   console.log(urlDatabase[req.params.shortURL]);
