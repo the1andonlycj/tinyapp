@@ -28,14 +28,16 @@ app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
 
+
 app.get("/hello", (req, res) => {
   let templateVars = { greeting: 'Hello World!' };
   res.render("hello", templateVars);
 });
 
 app.post("/urls", (req, res) => {
-  console.log(req.body);  // Log the POST request body to the console
-  res.send("Ok");         // Respond with 'Ok' (we will replace this)
+  let shorty = generateRandomString(); //Saving the random string to shorty variable
+  urlDatabase[shorty] = req.body.longURL; //Creating a database pair at the value of shorty : (original submission URL)
+  res.redirect(`/urls/${shorty}`);        //Redirect the user to the URL we just created
 });
 
 
