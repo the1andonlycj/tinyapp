@@ -18,17 +18,66 @@ function generateRandomString() {
   return (randomString);
 };
 
+//Repository for our URLs. Send data here to be included in the urls page.
 const urlDatabase = {
   // Key/value pairs for shortURL : longURL
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
 };
 
+//Repository for our users' data. Send data here to register a new user/check data here for redundancies
+const users = {
+  "userRandomID": {
+    id: "userRandomID", 
+    email: "user@example.com", 
+    password: "purple-monkey-dinosaur"
+  },
+ "user2RandomID": {
+    id: "user2RandomID", 
+    email: "user2@example.com", 
+    password: "dishwasher-funk"
+  }
+};
 
 //In case someone requests the basic page, they'll land here with a "hello"
 app.get("/", (req, res) => {
   res.send("Hello!");
 });
+
+//Register page information
+app.post("/register", (req, res) => {
+  //get all of the info that has been passed to the server:
+  const email = req.body.email;
+  const password = req.body.password;
+  //check to see if user exists
+  for(let userEmail in users) {
+    if(email === userEmail) {
+      //return an error
+
+
+    } else {
+      //user doesn't already exist, so let's create it:
+      let idString = generateRandomString();
+      users[idString] = { 
+        id: idString, 
+        email: email,
+        password: password
+      }
+      //create cookie for new user:
+      res.cookie("user_id", idString);
+      console.log(users);
+      //redirect to the URLs page when the user data has been successfully stored
+      res.redirect("/urls");
+    }
+  };
+  //if the user doesn't already exist, create its instance
+
+
+
+
+});
+
+
 
 //Setting up the delete function for URLs
 app.post("/urls/:shortURL/delete", (req, res) => {
@@ -45,17 +94,20 @@ app.post("/urls/:shortURL", (req, res) => {
 
 //Logout functionality with cookie deletion:
 app.post("/logout", (req, res) => {
-  res.clearCookie("username"); //Delete the cookie
+  res.clearCookie("user_id"); //Delete the cookie
   console.log("A Cookie has been deleted."); //Server side message when someone logs out/a cookie has been deleted
   res.redirect("/urls");  //reload URLs page (now without the logged in user)
 });
 
-
-
+//WILL BE FIXED LATER.
 app.post("/login", (req, res) => {
-  console.log(req.body.username);
   res.cookie("username", req.body.username);
   res.redirect("/urls");
+});
+
+//When requested, render the register page.
+app.get("/register", (req, res) => {
+  res.render("register");
 });
 
 //When requested, return a stringified JSON readout of our URL database 
@@ -63,11 +115,7 @@ app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
 
-//In case someone really wants to go to /hello... a classic.
-app.get("/hello", (req, res) => {
-  let templateVars = { greeting: 'Hello World!' };
-  res.render("hello", templateVars);
-});
+
 
 //When requested, push a new shortURL/URL pair to the database and redirect to the page showing the URLs.
 app.post("/urls", (req, res) => {
@@ -76,18 +124,19 @@ app.post("/urls", (req, res) => {
   res.redirect(`/urls/${shorty}`);        //Redirect the user to the URL we just created
 });
 
-
-//When reqeusted, render the urls_new page as outlind in the .ejs file of the same name.
+//When reqeusted, render the urls_new page as outlined in the .ejs file of the same name.
 app.get("/urls/new", (req, res) => {
-  res.render("urls_new");
+  let templateVars = {
+    user: req.cookies.user_id
+  }
+  res.render("urls_new", templateVars);
 });
 
 //When requested, show the URLs on a page
 app.get("/urls", (req, res) => {
-  console.log("Cookies", req.cookies);
   let templateVars = { 
-    username: req.cookies.username, //this gives the username so it can appear in the header
-    urls: urlDatabase,
+    user: users[req.cookies.user_id],    
+    urls: urlDatabase
   };
   res.render("urls_index", templateVars);
 });
@@ -97,9 +146,9 @@ app.get("/urls/:shortURL", (req, res) => {
   let templateVars = { 
     shortURL: req.params.shortURL, 
     longURL: urlDatabase[req.params.shortURL], 
-    username: req.cookies.username, //this gives the username so it can appear in the header
+    user: users[req.cookies.user_id], //this gives the email address so it can appear in the header
   };
-  console.log(urlDatabase[req.params.shortURL]);
+  console.log("This is so we know when this is being called: " + templateVars.user);
   res.render("urls_show", templateVars);
 });
 
