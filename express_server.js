@@ -43,6 +43,7 @@ app.post("/urls/:shortURL", (req, res) => {
   res.redirect("/urls");
 });
 
+//Logout functionality with cookie deletion:
 app.post("/logout", (req, res) => {
   res.clearCookie("username"); //Delete the cookie
   console.log("A Cookie has been deleted."); //Server side message when someone logs out/a cookie has been deleted
