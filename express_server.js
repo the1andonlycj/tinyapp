@@ -5,6 +5,8 @@ const PORT = 8080;
 app.set("view engine", "ejs");
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
+const cookieParser = require("cookie-parser");
+app.use(cookieParser()); //Checks if there's a cookie, then adds it to the cookie object
 
 //String generator to create unique shortURLs
 function generateRandomString() {
@@ -22,6 +24,7 @@ const urlDatabase = {
   "9sm5xK": "http://www.google.com"
 };
 
+
 //In case someone requests the basic page, they'll land here with a "hello"
 app.get("/", (req, res) => {
   res.send("Hello!");
@@ -34,12 +37,17 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   res.redirect("/urls");  //reload the page (now without the deleted URL upon completion)
 });
 
-//Edit
+//Edit the longURL but keep the shortURL the same
 app.post("/urls/:shortURL", (req, res) => {
   urlDatabase[req.params.shortURL] = req.body.longURL; //Params came as part of the URL, body came as part of the submission
   res.redirect("/urls");
 });
 
+app.post("/login", (req, res) => {
+  console.log(req.body.username);
+  res.cookie("username", req.body.username);
+  res.redirect("/urls");
+});
 
 //When requested, return a stringified JSON readout of our URL database 
 app.get("/urls.json", (req, res) => {
@@ -65,15 +73,23 @@ app.get("/urls/new", (req, res) => {
   res.render("urls_new");
 });
 
-//When reqeusted, show the URLs on a page
+//When requested, show the URLs on a page
 app.get("/urls", (req, res) => {
-  let templateVars = { urls: urlDatabase };
+  console.log("Cookies", req.cookies);
+  let templateVars = { 
+    username: req.cookies.username, //this gives the username so it can appear in the header
+    urls: urlDatabase,
+  };
   res.render("urls_index", templateVars);
 });
 
 //Because this URL produces itself procedurally, it can't be above others whose precedence it might take:
 app.get("/urls/:shortURL", (req, res) => {
-  let templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] };
+  let templateVars = { 
+    shortURL: req.params.shortURL, 
+    longURL: urlDatabase[req.params.shortURL], 
+    username: req.cookies.username, //this gives the username so it can appear in the header
+  };
   console.log(urlDatabase[req.params.shortURL]);
   res.render("urls_show", templateVars);
 });
