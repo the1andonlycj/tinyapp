@@ -43,6 +43,14 @@ app.post("/urls/:shortURL", (req, res) => {
   res.redirect("/urls");
 });
 
+app.post("/logout", (req, res) => {
+  res.clearCookie("username"); //Delete the cookie
+  console.log("A Cookie has been deleted."); //Server side message when someone logs out/a cookie has been deleted
+  res.redirect("/urls");  //reload URLs page (now without the logged in user)
+});
+
+
+
 app.post("/login", (req, res) => {
   console.log(req.body.username);
   res.cookie("username", req.body.username);
@@ -54,7 +62,7 @@ app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
 
-
+//In case someone really wants to go to /hello... a classic.
 app.get("/hello", (req, res) => {
   let templateVars = { greeting: 'Hello World!' };
   res.render("hello", templateVars);

@@ -8,17 +8,19 @@
       <div class="navbar-nav">
         <a class="nav-item nav-link" href="/urls">My URLs</a>
         <a class="nav-item nav-link" href="/urls/new">Create New URL</a>
-        <a class="nav-item nav-link">Login<form class="form-inline" action="/login" method="POST">
-        <div class="form-group mb-2">
-            <label for="username">Name =</label>
-            <input class="form-control" type="text" name="username" placeholder="username" style="width: 300px; margin: 1em">
-            <button type="submit" class="btn btn-primary">Submit</button>
-          </div>
-        </form>
-      </a>
-      <% if (username !== undefined) { %>
-        <h6>Username: <%- username %></h6>
-      <% } %>
+        <% if (username !== undefined) { %>
+          <h6>You're rockin' it, <%- username %> <form class="form-inline" action="/logout" method="POST"><button type="submit" class="btn btn-primary">Logout</button></form></h6>
+          <% } else { %>
+            <a class="nav-item nav-link">Login<form class="form-inline" action="/login" method="POST">
+            <div class="form-group mb-2">
+                <label for="username">Name =</label>
+                <input class="form-control" type="text" name="username" placeholder="username" style="width: 300px; margin: 1em">
+                <button type="submit" class="btn btn-primary">Submit</button>
+              </div>
+            </form>
+          </a>
+            
+        <% } %>
       </div>
     </div>
   </nav>
