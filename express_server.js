@@ -13,7 +13,7 @@ function generateRandomString() {
   var randomString = '';
   var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   for ( var i = 0; i < 6; i++ ) {
-     randomString += characters.charAt(Math.floor(Math.random() * 62));
+    randomString += characters.charAt(Math.floor(Math.random() * 62));
   }
   return (randomString);
 };
@@ -32,13 +32,23 @@ const users = {
     email: "user@example.com", 
     password: "purple-monkey-dinosaur"
   },
- "user2RandomID": {
+  "user2RandomID": {
     id: "user2RandomID", 
     email: "user2@example.com", 
     password: "dishwasher-funk"
   }
 };
 
+//Function to check existing user emails against proposed new user email:
+const emailChecker = function(users, checkMail) {
+  for(user in users) {
+    console.log("the user email is " + users[user].email)
+    if(users[user].email === checkMail) {
+      return true; 
+    }  
+  }
+  return false;
+};
 //In case someone requests the basic page, they'll land here with a "hello"
 app.get("/", (req, res) => {
   res.send("Hello!");
@@ -50,33 +60,29 @@ app.post("/register", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   //check to see if user exists
-  for(let userEmail in users) {
-    if(email === userEmail) {
-      //return an error
-
-
+  if(email === '') {
+    res.status(400).send(`Sorry, we're gonna need some info first.`)
+  } else {
+    //If emailChecker finds a match, throw the 400 error
+    if(emailChecker(users, email)) {
+      res.status(400).send(`We already have that email on file. Have you been here before?`)
     } else {
-      //user doesn't already exist, so let's create it:
+      //Else, the user doesn't already exist, so let's create it:
       let idString = generateRandomString();
       users[idString] = { 
         id: idString, 
         email: email,
         password: password
       }
-      //create cookie for new user:
+      //Create cookie for new user:
       res.cookie("user_id", idString);
       console.log(users);
       //redirect to the URLs page when the user data has been successfully stored
       res.redirect("/urls");
-    }
-  };
-  //if the user doesn't already exist, create its instance
-
-
-
-
+    } 
+ }
 });
-
+  
 
 
 //Setting up the delete function for URLs
@@ -127,7 +133,7 @@ app.post("/urls", (req, res) => {
 //When reqeusted, render the urls_new page as outlined in the .ejs file of the same name.
 app.get("/urls/new", (req, res) => {
   let templateVars = {
-    user: req.cookies.user_id
+    user: users[req.cookies.user_id]
   }
   res.render("urls_new", templateVars);
 });
