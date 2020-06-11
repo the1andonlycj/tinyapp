@@ -168,12 +168,21 @@ app.post("/urls", (req, res) => {
   res.redirect(`/urls/${shorty}`);        //Redirect the user to the URL we just created
 });
 
-//When reqeusted, render the urls_new page as outlined in the .ejs file of the same name.
+//When requested, render the urls_new page as outlined in the .ejs file of the same name.
 app.get("/urls/new", (req, res) => {
-  let templateVars = {
-    user: users[req.cookies.user_id]
+  //LOGIN CHECK
+  let templateVars = {};
+  console.log(`Cookie???? ${req.cookies['user_id']}`);
+  if(req.cookies.user_id !== undefined) {
+    let templateVars = {
+      user: users[req.cookies['user_id']],
+      urlDatabase
+    }
+    res.render("urls_new", templateVars);
+
+  } else {
+    res.redirect("/login")
   }
-  res.render("urls_new", templateVars);
 });
 
 //When requested, show the URLs on a page
