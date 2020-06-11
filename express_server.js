@@ -20,9 +20,9 @@ function generateRandomString() {
 
 //Repository for our URLs. Send data here to be included in the urls page.
 const urlDatabase = {
-  // Key/value pairs for shortURL : longURL
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  // Key/value pairs for shortURL are objects: shortUrl {longURL, userID}
+  b2xVn2: {longURL: "http://www.lighthouselabs.ca", userID: "userRandomID"},
+  jsm5xK: {longURL: "http://www.google.com", userID: "userRandomID"}
 };
 
 //Repository for our users' data. Send data here to register a new user/check data here for redundancies
@@ -30,7 +30,7 @@ const users = {
   "userRandomID": {
     id: "userRandomID", 
     email: "user@example.com", 
-    password: "purple-monkey-dinosaur"
+    password: "123"
   },
   "user2RandomID": {
     id: "user2RandomID", 
@@ -60,6 +60,26 @@ const idFinder = function(users, checkMail) {
   //If that email address hasn't been put in the database before, return an error:
   return "noSuchEmail";
 }
+
+//Function for sorting the URLs so logged in users only see their data:
+const urlsForUser = function(id) {
+  console.log("this is the id", id)
+  //Setup empty object to export:
+  let userURLs = {};
+  //Loop through the entries in the urlDatabase:
+  for(thisURL in urlDatabase) {
+    console.log(" the url id ", id);
+    console.log(" the user id", urlDatabase[thisURL].userID)
+    //if the entry has the same userID as what's in the cookie
+    if(id === urlDatabase[thisURL].userID) {
+      console.log("do i go here")
+      //true: push it to the object; false: do nothing with it.
+      userURLs[thisURL] = urlDatabase[thisURL];
+    }
+  }
+  console.log("heeyyyy", userURLs)
+  return userURLs;
+};
 
 
 //In case someone requests the basic page, they'll land here with a "hello"
@@ -127,14 +147,24 @@ app.post("/login", (req, res) => {
 
 //Setting up the delete function for URLs
 app.post("/urls/:shortURL/delete", (req, res) => {
-  delete urlDatabase[req.params.shortURL]; //Delete the desired data
-  console.log("A URL has been deleted."); //Server side message when a URL has been deleted
-  res.redirect("/urls");  //reload the page (now without the deleted URL upon completion)
+  if(req.cookies['user_id']) {
+    console.log("You ARE logged in.");
+      let templateVars = { 
+      shortURL: req.params.shortURL, 
+      longURL: urlDatabase[req.params.shortURL].longURL, 
+      userID: users[req.cookies.user_id], 
+    };
+    delete urlDatabase[req.params.shortURL]; //Delete the desired data
+    console.log("A URL has been deleted."); //Server side message when a URL has been deleted
+    res.redirect("/urls");  //reload the page (now without the deleted URL upon completion)
+  } else {
+    res.redirect("/login");  
+  }
 });
 
 //Edit the longURL but keep the shortURL the same
 app.post("/urls/:shortURL", (req, res) => {
-  urlDatabase[req.params.shortURL] = req.body.longURL; //Params came as part of the URL, body came as part of the submission
+  urlDatabase[req.params.shortURL].longURL = req.body.longURL; //Params came as part of the URL, body came as part of the submission
   res.redirect("/urls");
 });
 
@@ -159,46 +189,78 @@ app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
 
-
-
 //When requested, push a new shortURL/URL pair to the database and redirect to the page showing the URLs.
 app.post("/urls", (req, res) => {
   let shorty = generateRandomString(); //Saving the random string to shorty variable
-  urlDatabase[shorty] = req.body.longURL; //Creating a database pair at the value of shorty : (original submission URL)
+  let newEntry = {
+      longURL: req.body.longURL,
+      userID: req.cookies.user_id
+    }
+    urlDatabase[shorty] = newEntry; //Creating a database pair at the value of shorty : (original submission URL)
+    console.log(urlDatabase);
   res.redirect(`/urls/${shorty}`);        //Redirect the user to the URL we just created
 });
 
 //When reqeusted, render the urls_new page as outlined in the .ejs file of the same name.
 app.get("/urls/new", (req, res) => {
+<<<<<<< Updated upstream
   let templateVars = {
     user: users[req.cookies.user_id]
+=======
+  console.log(`Cookie???? AKA userID ${req.cookies['user_id']}`);
+  if(req.cookies.user_id !== undefined) {
+    let templateVars = {
+      user: users[req.cookies.user_id],
+    }
+  res.render("urls_new", templateVars);
+    
+  } else {
+    res.redirect("/login")
+>>>>>>> Stashed changes
   }
   res.render("urls_new", templateVars);
 });
 
 //When requested, show the URLs on a page
 app.get("/urls", (req, res) => {
-  let templateVars = { 
-    user: users[req.cookies.user_id],    
-    urls: urlDatabase
-  };
-  res.render("urls_index", templateVars);
+  //Check to see if the user is logged in:
+  console.log(`Cookie???? AKA userID ${req.cookies['user_id']}`);
+  
+  if(req.cookies.user_id !== undefined) {
+    let urls = urlsForUser(req.cookies['user_id'])
+    console.log("Is urlsforuser returning here?" + urls.shortURL);
+    //Since they're logged in, they can see content, BUT
+    //It should be THEIR content:
+
+    let templateVars = {
+      user: users[req.cookies['user_id']],
+      urls: urls
+    }
+    res.render("urls_index", templateVars); 
+  } else {
+  //They're not logged in, so they get redirected to login:
+  res.status(400).send(`Welcome! Have you logged in yet? Visit: http://localhost:8080/login`)
+  }
 });
 
 //Because this URL produces itself procedurally, it can't be above others whose precedence it might take:
 app.get("/urls/:shortURL", (req, res) => {
-  let templateVars = { 
-    shortURL: req.params.shortURL, 
-    longURL: urlDatabase[req.params.shortURL], 
-    user: users[req.cookies.user_id], //this gives the email address so it can appear in the header
-  };
-  res.render("urls_show", templateVars);
+  if(req.cookies['user_id']) {
+    console.log("You ARE logged in.");
+      let templateVars = { 
+      shortURL: req.params.shortURL, 
+      longURL: urlDatabase[req.params.shortURL].longURL, 
+      userID: users[req.cookies.user_id], 
+    };
+    res.render("urls_show", templateVars);
+  } else {
+    res.redirect("/login");  
+  }
 });
 
 //This is located at the bottom for similar reasons as the urls/:shortURL
 app.get("/u/:shortURL", (req, res) => {
   const longURL = urlDatabase[req.params.shortURL];
-  console.log(longURL);
   res.redirect(longURL);
 });
 
