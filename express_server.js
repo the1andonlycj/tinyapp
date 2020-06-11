@@ -203,10 +203,6 @@ app.post("/urls", (req, res) => {
 
 //When reqeusted, render the urls_new page as outlined in the .ejs file of the same name.
 app.get("/urls/new", (req, res) => {
-<<<<<<< Updated upstream
-  let templateVars = {
-    user: users[req.cookies.user_id]
-=======
   console.log(`Cookie???? AKA userID ${req.cookies['user_id']}`);
   if(req.cookies.user_id !== undefined) {
     let templateVars = {
@@ -216,7 +212,6 @@ app.get("/urls/new", (req, res) => {
     
   } else {
     res.redirect("/login")
->>>>>>> Stashed changes
   }
   res.render("urls_new", templateVars);
 });
