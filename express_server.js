@@ -49,12 +49,33 @@ const emailChecker = function(users, checkMail) {
   }
   return false;
 };
+
+//Function to find appropriate ID given an email address
+const idFinder = function(users, checkMail) {
+  for(user in users) {
+    if(users[user].email === checkMail) {
+      return user; 
+    }
+  }
+  //If that email address hasn't been put in the database before, return an error:
+  return "noSuchEmail";
+}
+
+
 //In case someone requests the basic page, they'll land here with a "hello"
 app.get("/", (req, res) => {
   res.send("Hello!");
 });
 
-//Register page information
+app.get("/login", (req, res) => {
+  let templateVars = {
+    user: users[req.cookies.user_id]
+  }
+  res.render("login", templateVars);
+})
+
+
+//Register page post functionality
 app.post("/register", (req, res) => {
   //get all of the info that has been passed to the server:
   const email = req.body.email;
@@ -82,8 +103,27 @@ app.post("/register", (req, res) => {
     } 
  }
 });
-  
 
+//Login page post funcionality
+app.post("/login", (req, res) => {
+  console.log("We in here, here's the email: " + req.body.email)
+  let foundId = idFinder(users, req.body.email);
+  if(foundId === "noSuchEmail") {
+    //Email is not registered. Respond with 403
+    res.status(403).send(`Sorry, we don't have that email on file.`)
+    //Email address was found, idFinder has returned the user's id tag
+  } else {
+    console.log(`I'ma checkin' this foundId.password value ${users[foundId].password}`)
+    if(users[foundId].password !== req.body.password) {
+      //Wrong password, try again.
+      res.status(403).send(`Sorry, that password didn't match.`)
+    } else {
+      //Right password, let's log you in:
+      res.cookie("user_id", foundId);
+      res.redirect("/urls");
+    }
+  }
+})
 
 //Setting up the delete function for URLs
 app.post("/urls/:shortURL/delete", (req, res) => {
@@ -105,15 +145,13 @@ app.post("/logout", (req, res) => {
   res.redirect("/urls");  //reload URLs page (now without the logged in user)
 });
 
-//WILL BE FIXED LATER.
-app.post("/login", (req, res) => {
-  res.cookie("username", req.body.username);
-  res.redirect("/urls");
-});
 
 //When requested, render the register page.
 app.get("/register", (req, res) => {
-  res.render("register");
+  let templateVars = {
+    user: users[req.cookies.user_id]
+  }
+  res.render("register", templateVars);
 });
 
 //When requested, return a stringified JSON readout of our URL database 
@@ -154,7 +192,6 @@ app.get("/urls/:shortURL", (req, res) => {
     longURL: urlDatabase[req.params.shortURL], 
     user: users[req.cookies.user_id], //this gives the email address so it can appear in the header
   };
-  console.log("This is so we know when this is being called: " + templateVars.user);
   res.render("urls_show", templateVars);
 });
 
