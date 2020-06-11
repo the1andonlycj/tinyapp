@@ -7,6 +7,8 @@ const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
 const cookieParser = require("cookie-parser");
 app.use(cookieParser()); //Checks if there's a cookie, then adds it to the cookie object
+const bcrypt = require('bcrypt');
+
 
 //String generator to create unique shortURLs
 function generateRandomString() {
@@ -113,7 +115,7 @@ app.post("/register", (req, res) => {
       users[idString] = { 
         id: idString, 
         email: email,
-        password: password
+        password: bcrypt.hashSync(password, 10)
       }
       //Create cookie for new user:
       res.cookie("user_id", idString);
@@ -123,6 +125,10 @@ app.post("/register", (req, res) => {
     } 
  }
 });
+
+app.get("/users", (req, res) => {
+  res.render(users);
+})
 
 //Login page post funcionality
 app.post("/login", (req, res) => {
@@ -134,7 +140,7 @@ app.post("/login", (req, res) => {
     //Email address was found, idFinder has returned the user's id tag
   } else {
     console.log(`I'ma checkin' this foundId.password value ${users[foundId].password}`)
-    if(users[foundId].password !== req.body.password) {
+    if(bcrypt.compareSync(req.body.password, users[foundId].password) === false) {
       //Wrong password, try again.
       res.status(403).send(`Sorry, that password didn't match.`)
     } else {
