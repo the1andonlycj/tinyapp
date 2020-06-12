@@ -2,13 +2,20 @@
 const express = require("express");
 const app = express();
 const PORT = 8080;
+
+
 app.set("view engine", "ejs");
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
 const cookieParser = require("cookie-parser");
 app.use(cookieParser()); //Checks if there's a cookie, then adds it to the cookie object
 const bcrypt = require('bcrypt');
-
+var cookieSession = require('cookie-session');
+app.use(cookieSession({
+  name: 'session',
+  keys: ["ilovebitsygirl"],
+  maxAge: 24 * 60 * 60 * 1000 // 24 hours
+}))
 
 //String generator to create unique shortURLs
 function generateRandomString() {
@@ -90,10 +97,14 @@ app.get("/", (req, res) => {
 });
 
 app.get("/login", (req, res) => {
-  let templateVars = {
-    user: users[req.cookies.user_id]
+  if(req.session.user_id) { 
+    res.redirect("/urls")
+  } else {
+    let templateVars = {
+      user: users[req.session.user_id]
+    }
+    res.render("login", templateVars);
   }
-  res.render("login", templateVars);
 })
 
 
@@ -118,7 +129,7 @@ app.post("/register", (req, res) => {
         password: bcrypt.hashSync(password, 10)
       }
       //Create cookie for new user:
-      res.cookie("user_id", idString);
+      req.session.user_id = idString;
       console.log(users);
       //redirect to the URLs page when the user data has been successfully stored
       res.redirect("/urls");
@@ -145,7 +156,7 @@ app.post("/login", (req, res) => {
       res.status(403).send(`Sorry, that password didn't match.`)
     } else {
       //Right password, let's log you in:
-      res.cookie("user_id", foundId);
+      req.session.user_id = foundId;
       res.redirect("/urls");
     }
   }
@@ -153,12 +164,12 @@ app.post("/login", (req, res) => {
 
 //Setting up the delete function for URLs
 app.post("/urls/:shortURL/delete", (req, res) => {
-  if(req.cookies['user_id']) {
+  if(req.session.user_id) {
     console.log("You ARE logged in.");
       let templateVars = { 
       shortURL: req.params.shortURL, 
       longURL: urlDatabase[req.params.shortURL].longURL, 
-      userID: users[req.cookies.user_id], 
+      userID: users[req.session.user_id], 
     };
     delete urlDatabase[req.params.shortURL]; //Delete the desired data
     console.log("A URL has been deleted."); //Server side message when a URL has been deleted
@@ -176,7 +187,7 @@ app.post("/urls/:shortURL", (req, res) => {
 
 //Logout functionality with cookie deletion:
 app.post("/logout", (req, res) => {
-  res.clearCookie("user_id"); //Delete the cookie
+  req.session = null; //Delete the cookie
   console.log("A Cookie has been deleted."); //Server side message when someone logs out/a cookie has been deleted
   res.redirect("/urls");  //reload URLs page (now without the logged in user)
 });
@@ -184,10 +195,14 @@ app.post("/logout", (req, res) => {
 
 //When requested, render the register page.
 app.get("/register", (req, res) => {
-  let templateVars = {
-    user: users[req.cookies.user_id]
+  if(req.session.user_id) { 
+    res.redirect("/urls");
+  } else {
+    let templateVars = {
+      user: users[req.session.user_id]
+    }
+    res.render("register", templateVars);
   }
-  res.render("register", templateVars);
 });
 
 //When requested, return a stringified JSON readout of our URL database 
@@ -200,7 +215,7 @@ app.post("/urls", (req, res) => {
   let shorty = generateRandomString(); //Saving the random string to shorty variable
   let newEntry = {
       longURL: req.body.longURL,
-      userID: req.cookies.user_id
+      userID: req.session.user_id
     }
     urlDatabase[shorty] = newEntry; //Creating a database pair at the value of shorty : (original submission URL)
     console.log(urlDatabase);
@@ -209,32 +224,31 @@ app.post("/urls", (req, res) => {
 
 //When reqeusted, render the urls_new page as outlined in the .ejs file of the same name.
 app.get("/urls/new", (req, res) => {
-  console.log(`Cookie???? AKA userID ${req.cookies['user_id']}`);
-  if(req.cookies.user_id !== undefined) {
+  console.log(`The userID, random string is ${req.session.user_id}`);
+  if(req.session.user_id !== undefined) {
     let templateVars = {
-      user: users[req.cookies.user_id],
+      user: users[req.session.user_id],
     }
   res.render("urls_new", templateVars);
     
   } else {
     res.redirect("/login")
   }
-  res.render("urls_new", templateVars);
 });
 
 //When requested, show the URLs on a page
 app.get("/urls", (req, res) => {
   //Check to see if the user is logged in:
-  console.log(`Cookie???? AKA userID ${req.cookies['user_id']}`);
+  console.log(`The userID, random string is ${req.session.user_id}`);
   
-  if(req.cookies.user_id !== undefined) {
-    let urls = urlsForUser(req.cookies['user_id'])
+  if(req.session.user_id !== undefined) {
+    let urls = urlsForUser(req.session.user_id)
     console.log("Is urlsforuser returning here?" + urls.shortURL);
     //Since they're logged in, they can see content, BUT
     //It should be THEIR content:
 
     let templateVars = {
-      user: users[req.cookies['user_id']],
+      user: users[req.session.user_id],
       urls: urls
     }
     res.render("urls_index", templateVars); 
@@ -246,12 +260,12 @@ app.get("/urls", (req, res) => {
 
 //Because this URL produces itself procedurally, it can't be above others whose precedence it might take:
 app.get("/urls/:shortURL", (req, res) => {
-  if(req.cookies['user_id']) {
+  if(req.session.user_id) {
     console.log("You ARE logged in.");
       let templateVars = { 
       shortURL: req.params.shortURL, 
       longURL: urlDatabase[req.params.shortURL].longURL, 
-      userID: users[req.cookies.user_id], 
+      user: users[req.session.user_id]
     };
     res.render("urls_show", templateVars);
   } else {
@@ -261,7 +275,7 @@ app.get("/urls/:shortURL", (req, res) => {
 
 //This is located at the bottom for similar reasons as the urls/:shortURL
 app.get("/u/:shortURL", (req, res) => {
-  const longURL = urlDatabase[req.params.shortURL];
+  const longURL = urlDatabase[req.params.shortURL].longURL;
   res.redirect(longURL);
 });
 
