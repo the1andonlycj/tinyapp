@@ -27,57 +27,31 @@ const users = {
 
 
 
-//In case someone requests the basic page, they'll land here with a "hello"
-app.get("/", (req, res) => {
-  res.redirect("/urls");
-});
-
-app.get("/login", (req, res) => {
-  if(req.session.user_id) { 
-    res.redirect("/urls")
-  } else {
-    let templateVars = {
-      user: users[req.session.user_id]
-    }
-    res.render("login", templateVars);
-  }
-})
-
-
+//<===================POSTING FUNCIONALITY==================================>
 //Register page post functionality
 app.post("/register", (req, res) => {
-  //get all of the info that has been passed to the server:
   const email = req.body.email;
   const password = req.body.password;
-  //check to see if user exists
   if(email === '') {
     res.status(400).send(`Sorry, we're gonna need some info first.`)
   } else {
-    //If emailChecker finds a match, throw the 400 error
     if(helpers.emailChecker(users, email)) {
       res.status(400).send(`We already have that email on file. Have you been here before?`)
     } else {
-      //Else, the user doesn't already exist, so let's create it:
       let idString = helpers.generateRandomString();
       users[idString] = { 
         id: idString, 
         email: email,
         password: bcrypt.hashSync(password, 10)
       }
-      //Create cookie for new user:
       req.session.user_id = idString;
       console.log(users);
-      //redirect to the URLs page when the user data has been successfully stored
       res.redirect("/urls");
-    } 
- }
+    }
+  }
 });
 
-app.get("/users", (req, res) => {
-  res.render(users);
-})
-
-//Login page post funcionality
+//Login page post funcionality:
 app.post("/login", (req, res) => {
   console.log("We in here, here's the email: " + req.body.email)
   let foundId = helpers.idFinder(users, req.body.email);
@@ -98,38 +72,63 @@ app.post("/login", (req, res) => {
   }
 })
 
-//Setting up the delete function for URLs
+//Delete function for URLs:
 app.post("/urls/:shortURL/delete", (req, res) => {
   if(req.session.user_id) {
-    console.log("You ARE logged in.");
-      let templateVars = { 
-      shortURL: req.params.shortURL, 
-      longURL: urlDatabase[req.params.shortURL].longURL, 
-      userID: users[req.session.user_id], 
+    let templateVars = {
+      shortURL: req.params.shortURL,
+      longURL: urlDatabase[req.params.shortURL].longURL,
+      userID: users[req.session.user_id],
     };
-    delete urlDatabase[req.params.shortURL]; //Delete the desired data
-    console.log("A URL has been deleted."); //Server side message when a URL has been deleted
-    res.redirect("/urls");  //reload the page (now without the deleted URL upon completion)
+    delete urlDatabase[req.params.shortURL];
+    res.redirect("/urls");
   } else {
     res.redirect("/login");  
   }
 });
 
-//Edit the longURL but keep the shortURL the same
+//Edit longURL, but keep the shortURL unchanged:
 app.post("/urls/:shortURL", (req, res) => {
-  urlDatabase[req.params.shortURL].longURL = req.body.longURL; //Params came as part of the URL, body came as part of the submission
+  urlDatabase[req.params.shortURL].longURL = req.body.longURL;
   res.redirect("/urls");
+});
+
+//Post new shortURL/URL pair to the database and redirect /urls:
+app.post("/urls", (req, res) => {
+  let shorty = helpers.generateRandomString(); //Saving the random string to shorty variable
+  let newEntry = {
+    longURL: req.body.longURL,
+    userID: req.session.user_id
+  }
+  urlDatabase[shorty] = newEntry;
+  res.redirect(`/urls/${shorty}`);
 });
 
 //Logout functionality with cookie deletion:
 app.post("/logout", (req, res) => {
-  req.session = null; //Delete the cookie
-  console.log("A Cookie has been deleted."); //Server side message when someone logs out/a cookie has been deleted
-  res.redirect("/urls");  //reload URLs page (now without the logged in user)
+  req.session = null;
+  res.redirect("/urls");
 });
 
+//<===================GET/SHOW PAGE FUNCTIONALITY==========================>
+//In case someone requests the basic page, redirect to /urls
+app.get("/", (req, res) => {
+  res.redirect("/urls");
+});
 
-//When requested, render the register page.
+//If user is logged in, redirect to urls, otherwise, show /login:
+app.get("/login", (req, res) => {
+  if(req.session.user_id) { 
+    res.redirect("/urls")
+  } else {
+    let templateVars = {
+      user: users[req.session.user_id]
+    }
+    res.render("login", templateVars);
+  }
+});
+
+//Render the register page.
 app.get("/register", (req, res) => {
   if(req.session.user_id) { 
     res.redirect("/urls");
@@ -141,64 +140,43 @@ app.get("/register", (req, res) => {
   }
 });
 
-//When requested, return a stringified JSON readout of our URL database 
+//Return a stringified JSON readout of our URL database 
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
 
-//When requested, push a new shortURL/URL pair to the database and redirect to the page showing the URLs.
-app.post("/urls", (req, res) => {
-  let shorty = helpers.generateRandomString(); //Saving the random string to shorty variable
-  let newEntry = {
-      longURL: req.body.longURL,
-      userID: req.session.user_id
-    }
-    urlDatabase[shorty] = newEntry; //Creating a database pair at the value of shorty : (original submission URL)
-    console.log(urlDatabase);
-  res.redirect(`/urls/${shorty}`);        //Redirect the user to the URL we just created
-});
 
-//When reqeusted, render the urls_new page as outlined in the .ejs file of the same name.
+//Render the /urls_new page:
 app.get("/urls/new", (req, res) => {
-  console.log(`The userID, random string is ${req.session.user_id}`);
   if(req.session.user_id !== undefined) {
     let templateVars = {
       user: users[req.session.user_id],
     }
-  res.render("urls_new", templateVars);
+    res.render("urls_new", templateVars);
     
   } else {
     res.redirect("/login")
   }
 });
 
-//When requested, show the URLs on a page
+//Show the URLs if user is logged in, otherwise redirect:
 app.get("/urls", (req, res) => {
-  //Check to see if the user is logged in:
-  console.log(`The userID, random string is ${req.session.user_id}`);
-  
   if(req.session.user_id !== undefined) {
     let urls = helpers.urlsForUser(req.session.user_id, urlDatabase)
-    console.log("Is urlsforuser returning here?" + urls.shortURL);
-    //Since they're logged in, they can see content, BUT
-    //It should be THEIR content:
-
     let templateVars = {
       user: users[req.session.user_id],
       urls: urls
     }
     res.render("urls_index", templateVars); 
   } else {
-  //They're not logged in, so they get redirected to login:
-  res.status(400).send(`Welcome! Have you logged in yet? Visit: http://localhost:8080/login`)
+    res.status(400).send(`Welcome! Have you logged in yet? Visit: http://localhost:8080/login`)
   }
 });
 
-//Because this URL produces itself procedurally, it can't be above others whose precedence it might take:
+//Procedurally create pages for shortURLs if user is logged in:
 app.get("/urls/:shortURL", (req, res) => {
   if(req.session.user_id) {
-    console.log("You ARE logged in.");
-      let templateVars = { 
+    let templateVars = { 
       shortURL: req.params.shortURL, 
       longURL: urlDatabase[req.params.shortURL].longURL, 
       user: users[req.session.user_id]
@@ -209,12 +187,13 @@ app.get("/urls/:shortURL", (req, res) => {
   }
 });
 
-//This is located at the bottom for similar reasons as the urls/:shortURL
+//Procedurally create pages for shortURLs, but these are public:
 app.get("/u/:shortURL", (req, res) => {
   const longURL = urlDatabase[req.params.shortURL].longURL;
   res.redirect(longURL);
 });
 
+//Console Log the port we're listening on:
 app.listen(PORT, () => {
   console.log(`TinyUrl App Listening on Port ${PORT}!`);
 });
