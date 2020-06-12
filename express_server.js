@@ -1,99 +1,35 @@
 //Declaring all of our dependencies:
+const helpers = require("./helpers.js")
 const express = require("express");
 const app = express();
 const PORT = 8080;
-
-
-app.set("view engine", "ejs");
 const bodyParser = require("body-parser");
-app.use(bodyParser.urlencoded({extended: true}));
 const cookieParser = require("cookie-parser");
-app.use(cookieParser()); //Checks if there's a cookie, then adds it to the cookie object
+const cookieSession = require('cookie-session');
 const bcrypt = require('bcrypt');
-var cookieSession = require('cookie-session');
+app.set("view engine", "ejs");
+app.use(bodyParser.urlencoded({extended: true}));
+app.use(cookieParser()); //Checks if there's a cookie, then adds it to the cookie object
 app.use(cookieSession({
   name: 'session',
   keys: ["ilovebitsygirl"],
   maxAge: 24 * 60 * 60 * 1000 // 24 hours
-}))
+}));
 
-//String generator to create unique shortURLs
-function generateRandomString() {
-  var randomString = '';
-  var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  for ( var i = 0; i < 6; i++ ) {
-    randomString += characters.charAt(Math.floor(Math.random() * 62));
-  }
-  return (randomString);
-};
-
-//Repository for our URLs. Send data here to be included in the urls page.
+//<===================DATABASES============================================>
+//Repository for URLs:
 const urlDatabase = {
-  // Key/value pairs for shortURL are objects: shortUrl {longURL, userID}
-  b2xVn2: {longURL: "http://www.lighthouselabs.ca", userID: "userRandomID"},
-  jsm5xK: {longURL: "http://www.google.com", userID: "userRandomID"}
 };
-
-//Repository for our users' data. Send data here to register a new user/check data here for redundancies
+//Repository for our user data:
 const users = {
-  "userRandomID": {
-    id: "userRandomID", 
-    email: "user@example.com", 
-    password: "123"
-  },
-  "user2RandomID": {
-    id: "user2RandomID", 
-    email: "user2@example.com", 
-    password: "dishwasher-funk"
-  }
 };
 
-//Function to check existing user emails against proposed new user email:
-const emailChecker = function(users, checkMail) {
-  for(user in users) {
-    console.log("the user email is " + users[user].email)
-    if(users[user].email === checkMail) {
-      return true; 
-    }  
-  }
-  return false;
-};
 
-//Function to find appropriate ID given an email address
-const idFinder = function(users, checkMail) {
-  for(user in users) {
-    if(users[user].email === checkMail) {
-      return user; 
-    }
-  }
-  //If that email address hasn't been put in the database before, return an error:
-  return "noSuchEmail";
-}
-
-//Function for sorting the URLs so logged in users only see their data:
-const urlsForUser = function(id) {
-  console.log("this is the id", id)
-  //Setup empty object to export:
-  let userURLs = {};
-  //Loop through the entries in the urlDatabase:
-  for(thisURL in urlDatabase) {
-    console.log(" the url id ", id);
-    console.log(" the user id", urlDatabase[thisURL].userID)
-    //if the entry has the same userID as what's in the cookie
-    if(id === urlDatabase[thisURL].userID) {
-      console.log("do i go here")
-      //true: push it to the object; false: do nothing with it.
-      userURLs[thisURL] = urlDatabase[thisURL];
-    }
-  }
-  console.log("heeyyyy", userURLs)
-  return userURLs;
-};
 
 
 //In case someone requests the basic page, they'll land here with a "hello"
 app.get("/", (req, res) => {
-  res.send("Hello!");
+  res.redirect("/urls");
 });
 
 app.get("/login", (req, res) => {
@@ -118,11 +54,11 @@ app.post("/register", (req, res) => {
     res.status(400).send(`Sorry, we're gonna need some info first.`)
   } else {
     //If emailChecker finds a match, throw the 400 error
-    if(emailChecker(users, email)) {
+    if(helpers.emailChecker(users, email)) {
       res.status(400).send(`We already have that email on file. Have you been here before?`)
     } else {
       //Else, the user doesn't already exist, so let's create it:
-      let idString = generateRandomString();
+      let idString = helpers.generateRandomString();
       users[idString] = { 
         id: idString, 
         email: email,
@@ -144,7 +80,7 @@ app.get("/users", (req, res) => {
 //Login page post funcionality
 app.post("/login", (req, res) => {
   console.log("We in here, here's the email: " + req.body.email)
-  let foundId = idFinder(users, req.body.email);
+  let foundId = helpers.idFinder(users, req.body.email);
   if(foundId === "noSuchEmail") {
     //Email is not registered. Respond with 403
     res.status(403).send(`Sorry, we don't have that email on file.`)
@@ -212,7 +148,7 @@ app.get("/urls.json", (req, res) => {
 
 //When requested, push a new shortURL/URL pair to the database and redirect to the page showing the URLs.
 app.post("/urls", (req, res) => {
-  let shorty = generateRandomString(); //Saving the random string to shorty variable
+  let shorty = helpers.generateRandomString(); //Saving the random string to shorty variable
   let newEntry = {
       longURL: req.body.longURL,
       userID: req.session.user_id
@@ -242,7 +178,7 @@ app.get("/urls", (req, res) => {
   console.log(`The userID, random string is ${req.session.user_id}`);
   
   if(req.session.user_id !== undefined) {
-    let urls = urlsForUser(req.session.user_id)
+    let urls = helpers.urlsForUser(req.session.user_id, urlDatabase)
     console.log("Is urlsforuser returning here?" + urls.shortURL);
     //Since they're logged in, they can see content, BUT
     //It should be THEIR content:
@@ -280,5 +216,5 @@ app.get("/u/:shortURL", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Example app listening on port ${PORT}!`);
+  console.log(`TinyUrl App Listening on Port ${PORT}!`);
 });
