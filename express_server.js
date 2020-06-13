@@ -32,6 +32,9 @@ const users = {
 app.post("/register", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
+  if(password === '') {
+    res.status(400).send(`Sorry, we're gonna need some info first.`)
+  }
   if(email === '') {
     res.status(400).send(`Sorry, we're gonna need some info first.`)
   } else {
@@ -113,7 +116,11 @@ app.post("/logout", (req, res) => {
 //<===================GET/SHOW PAGE FUNCTIONALITY==========================>
 //In case someone requests the basic page, redirect to /urls
 app.get("/", (req, res) => {
-  res.redirect("/urls");
+  if(req.session.user_id !== undefined) {
+    res.redirect("/urls")
+  } else {
+    res.redirect("/login")
+  }
 });
 
 //If user is logged in, redirect to urls, otherwise, show /login:
@@ -175,7 +182,7 @@ app.get("/urls", (req, res) => {
 
 //Procedurally create pages for shortURLs if user is logged in:
 app.get("/urls/:shortURL", (req, res) => {
-  if(req.session.user_id) {
+  if(req.session.user_id === urlDatabase[req.params.shortURL].userID) {
     let templateVars = { 
       shortURL: req.params.shortURL, 
       longURL: urlDatabase[req.params.shortURL].longURL, 
@@ -183,14 +190,18 @@ app.get("/urls/:shortURL", (req, res) => {
     };
     res.render("urls_show", templateVars);
   } else {
-    res.redirect("/login");  
+    res.status(400).send(`Sorry, you gotta be the owner of the URL to go to that page.`)
   }
 });
 
 //Procedurally create pages for shortURLs, but these are public:
 app.get("/u/:shortURL", (req, res) => {
+  if (urlDatabase[req.params.shortURL]) {
   const longURL = urlDatabase[req.params.shortURL].longURL;
   res.redirect(longURL);
+  } else {
+    res.status(400).send(`Sorry, we don't have any urls by that name.`)
+  }
 });
 
 //Console Log the port we're listening on:
