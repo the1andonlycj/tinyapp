@@ -24,9 +24,6 @@ const urlDatabase = {
 const users = {
 };
 
-
-
-
 //<===================POSTING FUNCIONALITY==================================>
 //Register page post functionality
 app.post("/register", (req, res) => {
@@ -48,7 +45,6 @@ app.post("/register", (req, res) => {
         password: bcrypt.hashSync(password, 10)
       }
       req.session.user_id = idString;
-      console.log(users);
       res.redirect("/urls");
     }
   }
@@ -56,14 +52,12 @@ app.post("/register", (req, res) => {
 
 //Login page post funcionality:
 app.post("/login", (req, res) => {
-  console.log("We in here, here's the email: " + req.body.email)
   let foundId = helpers.idFinder(users, req.body.email);
   if(foundId === "noSuchEmail") {
     //Email is not registered. Respond with 403
     res.status(403).send(`Sorry, we don't have that email on file.`)
     //Email address was found, idFinder has returned the user's id tag
   } else {
-    console.log(`I'ma checkin' this foundId.password value ${users[foundId].password}`)
     if(bcrypt.compareSync(req.body.password, users[foundId].password) === false) {
       //Wrong password, try again.
       res.status(403).send(`Sorry, that password didn't match.`)
